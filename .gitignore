@@ -1,0 +1,15 @@
+# Ambiente virtual
+.venv/
+
+# Caches do Python e do Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Arquivos locais do MLflow (histórico e artefatos ficam só na máquina)
+mlflow.db
+mlruns/
+
+# Segredos e configurações locais
+.env
+.vscode/
