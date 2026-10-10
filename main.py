@@ -161,12 +161,15 @@ def executar_experimento(exp, args, id_execucao):
             "pergunta": exp["pergunta"],
             "justificativa": exp["justificativa"],
             "id_execucao": id_execucao,
-            "papel": "candidato" if exp["candidato"] else "referencia",
+            "papel": exp.get("papel", "candidato" if exp["candidato"] else "referencia"),
             "modelo": exp["modelo"],
         })
+        remover = exp.get("remover_colunas", [])
         parametros = {"modelo": exp["modelo"], **exp["hiperparametros"]}
         if eh_mlp:
             parametros.update({"epocas": exp["epocas"], "solver": "adam", "activation": "relu"})
+        if remover:
+            parametros["colunas_removidas"] = ",".join(remover)
         if exp["alteracoes_cli"]:
             parametros["alteracoes_cli"] = json.dumps(exp["alteracoes_cli"])
         mlflow.log_params(parametros)
@@ -183,10 +186,19 @@ def executar_experimento(exp, args, id_execucao):
                                   "teste_reservado": len(partes[2])})
 
             with mlflow.start_span(name="preprocessamento") as span:
+                # Colunas retiradas de propósito (usado na investigação sem "odor")
+                X_treino = X_treino.drop(columns=remover)
+                X_validacao = X_validacao.drop(columns=remover)
                 # Aprende as categorias SOMENTE com o treino -> sem vazamento de dados
                 preprocessador = criar_preprocessador(X_treino.columns)
                 X_treino_cod = preprocessador.fit_transform(X_treino)
                 X_validacao_cod = preprocessador.transform(X_validacao)
+                resumo_preproc = {
+                    **config.PREPROCESSAMENTO,
+                    "colunas_removidas_no_experimento": remover,
+                    "atributos_de_entrada": X_treino.shape[1],
+                    "colunas_apos_one_hot": X_treino_cod.shape[1],
+                }
                 span.set_outputs({"colunas_apos_one_hot": X_treino_cod.shape[1]})
 
             with mlflow.start_span(name="treinamento") as span:
@@ -227,6 +239,7 @@ def executar_experimento(exp, args, id_execucao):
             plt.close(figura)
             mlflow.log_dict(historico, "historico_epocas.json")
         mlflow.log_dict(resumo_reproducao(exp, args, id_execucao), "configuracao.json")
+        mlflow.log_dict(resumo_preproc, "preprocessamento.json")
 
         pipeline = montar_pipeline(preprocessador, modelo)
         mlflow.sklearn.log_model(
@@ -250,7 +263,7 @@ def executar_experimento(exp, args, id_execucao):
         **{k: v for k, v in metricas.items() if k.startswith("val_") and k != "val_accuracy"},
     }
     texto_loss = f" | val_loss={resultado['val_loss']:.6f}" if eh_mlp else ""
-    print(f"  {nome:<20} val_accuracy={resultado['val_accuracy']:.4f} | "
+    print(f"  {nome:<27} val_accuracy={resultado['val_accuracy']:.4f} | "
           f"val_f1={resultado['val_f1']:.4f}{texto_loss}")
     return resultado
 

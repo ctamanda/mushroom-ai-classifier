@@ -82,6 +82,20 @@ EXPERIMENTOS = {
         "justificativa": "Igual à base, mudando só a regularização L2 (0.0001 -> 0.1).",
         "hiperparametros": {**MLP_BASE, "alpha": 0.1},
     },
+    # Investigação do resultado inesperado (todas as runs chegam a 100%):
+    # hipótese = o atributo "odor" sozinho já separa quase todas as classes.
+    # Mesma configuração da mlp-base, mas SEM a coluna odor. Não entra na seleção.
+    "mlp-sem-odor": {
+        "nome_execucao": "investigacao-mlp-sem-odor",
+        "modelo": "MLPClassifier",
+        "candidato": False,
+        "papel": "investigacao",
+        "epocas": 30,
+        "remover_colunas": ["odor"],
+        "pergunta": "Os 100% dependem do atributo odor? O que acontece sem ele?",
+        "justificativa": "Igual à mlp-base, removendo só a coluna odor dos dados.",
+        "hiperparametros": dict(MLP_BASE),
+    },
     "arvore": {
         "nome_execucao": "ref-arvore-decisao",
         "modelo": "DecisionTreeClassifier",
