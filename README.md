@@ -75,10 +75,11 @@ Métricas binárias usam **venenoso (p) = classe positiva**, porque o erro mais 
 | `mlp-base` | MLP | (32,) | 0.001 | 0.0001 | 30 | configuração de referência |
 | `mlp-lr-alta` | MLP | (32,) | **0.01** | 0.0001 | 30 | efeito da taxa de aprendizado |
 | `mlp-l2-alta` | MLP | (32,) | 0.001 | **0.1** | 30 | efeito da regularização L2 |
+| `investigacao-mlp-sem-odor` | MLP | (32,) | 0.001 | 0.0001 | 30 | igual à base, **sem a coluna `odor`** (investigação) |
 | `ref-arvore-decisao` | Árvore | max_depth=5 | – | – | – | referência |
 | `ref-random-forest` | Random Forest | 100 árvores | – | – | – | referência |
 
-Todas as MLPs usam `batch_size=64` e semente 42. Cada uma muda **um único parâmetro** em relação à base.
+Todas as MLPs usam `batch_size=64` e semente 42. Cada uma muda **um único parâmetro** em relação à base. A run de investigação não participa da seleção.
 
 ## MLflow
 
@@ -91,9 +92,9 @@ O que cada run registra:
 |---|---|---|
 | Parâmetros | modelo, hiperparâmetros, épocas, semente, proporções, tamanhos, origem dos dados, pré-processamento | configuração escolhida e id da run escolhida |
 | Métricas | `train_loss`, `val_loss`, `train_accuracy`, `val_accuracy` por época (MLP); `val_precision`, `val_recall`, `val_f1` | `test_accuracy`, `test_precision`, `test_recall`, `test_f1` |
-| Artefatos | curvas, matriz de confusão e relatório (validação), histórico por época, `configuracao.json` (reprodução), modelo | matriz de confusão e relatório (teste), `comparacao_validacao.csv`, `selecao.json` |
+| Artefatos | curvas, matriz de confusão e relatório (validação), histórico por época, `preprocessamento.json`, `configuracao.json` (reprodução), modelo | matriz de confusão e relatório (teste), `comparacao_validacao.csv`, `selecao.json` |
 | Traces | `preparacao_dados → preprocessamento → treinamento → validacao` | `preparacao_dados → teste` |
-| Tags | `papel` (candidato/referencia), `id_execucao`, `selecionada=sim` na escolhida | `run_escolhida_nome`, `run_escolhida_id` |
+| Tags | `papel` (candidato/investigacao/referencia), `id_execucao`, `selecionada=sim` na escolhida, commit do git | `run_escolhida_nome`, `run_escolhida_id` |
 
 Para abrir a interface:
 
@@ -105,7 +106,7 @@ Depois acesse http://127.0.0.1:5000. Os traces ficam na aba **Traces** do experi
 
 Se uma execução falhar, o terminal mostra uma mensagem de erro e a run fica com status **FAILED** no MLflow.
 
-## Resultados (execução `2026-10-10_19-59-25`)
+## Resultados (execução `2026-10-10_20-38-41`, commit `9a0aaa5`)
 
 **Validação:**
 
@@ -114,6 +115,7 @@ Se uma execução falhar, o terminal mostra uma mensagem de erro e a run fica co
 | mlp-base | 1.0000 | 1.0000 | 0.000351 | 4 |
 | **mlp-lr-alta** | 1.0000 | 1.0000 | **0.000016** | **2** |
 | mlp-l2-alta | 1.0000 | 1.0000 | 0.005519 | 4 |
+| investigacao-mlp-sem-odor | 1.0000 | 1.0000 | 0.001062 | 9 |
 | ref-arvore-decisao | 1.0000 | 1.0000 | – | – |
 | ref-random-forest | 1.0000 | 1.0000 | – | – |
 
@@ -121,4 +123,10 @@ Se uma execução falhar, o terminal mostra uma mensagem de erro e a run fica co
 
 **Teste final (`mlp-lr-alta`):** accuracy = precision = recall = F1 = **1.0000** (842 comestíveis e 783 venenosos, zero erros).
 
-**Limitações:** a base Mushroom é quase perfeitamente separável (o atributo `odor` sozinho já distingue a maioria dos casos), então todos os modelos chegam a 100%. Nessa situação, a comparação depende do `val_loss` e da velocidade de convergência, não da acurácia. Uma `val_loss` muito baixa também indica um modelo muito confiante. Com dados de outra origem, o desempenho pode ser menor.
+**Investigação do resultado inesperado:**
+- **Sintoma:** todas as runs chegam a 100%.
+- **Hipótese:** o atributo `odor` sozinho separa as classes.
+- **Nova run:** `investigacao-mlp-sem-odor`.
+- **Resultado:** a hipótese foi **refutada**. Sem o `odor`, a MLP ainda chega a 100% na validação, mas mais devagar (época 9, contra época 4) e com `val_loss` cerca de 3x maior. Outros atributos, como `spore-print-color`, carregam informação parecida: a base tem atributos redundantes.
+
+**Limitações:** a base Mushroom é quase perfeitamente separável, então todos os modelos chegam a 100%. A comparação depende do `val_loss` e da velocidade de convergência, não da acurácia. Uma `val_loss` muito baixa também indica um modelo muito confiante. Com dados de outra origem, o desempenho pode ser menor.
