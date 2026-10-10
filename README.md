@@ -99,7 +99,7 @@ O que cada run registra:
 Para abrir a interface:
 
 ```powershell
-mlflow ui --backend-store-uri sqlite:///mlflow.db
+mlflow ui --backend-store-uri sqlite:///mlflow.db --workers 1
 ```
 
 Depois acesse http://127.0.0.1:5000. Os traces ficam na aba **Traces** do experimento.

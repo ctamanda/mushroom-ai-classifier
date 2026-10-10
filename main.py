@@ -396,7 +396,7 @@ def main():
     print("  " + " | ".join(f"{k}={v:.4f}" for k, v in metricas.items()))
     print(relatorio)
     print(f"Resultados no experimento MLflow '{config.NOME_EXPERIMENTO_MLFLOW}'.")
-    print("Para ver na interface:  mlflow ui --backend-store-uri sqlite:///mlflow.db")
+    print("Para ver na interface:  mlflow ui --backend-store-uri sqlite:///mlflow.db --workers 1")
 
 
 if __name__ == "__main__":
